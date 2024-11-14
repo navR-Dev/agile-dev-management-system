@@ -6,6 +6,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework import status
+from django.contrib.auth import authenticate, login, logout
 import json
 from .models import Sprint, Project, Task, Issue
 from .serializers import ProjectSerializer
@@ -173,3 +176,55 @@ def add_issue(request):
             return JsonResponse({"status": "error", "message": str(e)}, status=400)
 
     return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
+
+@api_view(['POST'])
+def signup(request):
+    username = request.data.get('username')
+    password = request.data.get('password')
+    email = request.data.get('email')
+
+    # Check if the username already exists
+    if User.objects.filter(username=username).exists():
+        return Response({"error": "Username already exists"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Create new user
+    user = User.objects.create_user(username=username, password=password, email=email)
+    
+    # Generate JWT token for the new user
+    refresh = RefreshToken.for_user(user)
+    access_token = refresh.access_token
+
+    return Response({
+        "message": "User created successfully",
+        "token": str(access_token)  # Return the JWT token
+    }, status=status.HTTP_201_CREATED)
+
+
+# Login View - Authenticates user and provides JWT token
+@api_view(['POST'])
+def login_view(request):
+    username = request.data.get('username')
+    password = request.data.get('password')
+
+    # Authenticate the user
+    user = authenticate(request, username=username, password=password)
+
+    if user is not None:
+        # Login the user (optional step, not necessary for JWT)
+        login(request, user)
+        
+        # Generate JWT token
+        refresh = RefreshToken.for_user(user)
+        access_token = refresh.access_token
+
+        return Response({
+            "message": "Logged in successfully",
+            "token": str(access_token)  # Return the JWT token
+        }, status=status.HTTP_200_OK)
+    else:
+        return Response({"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+def logout_view(request):
+    logout(request)
+    return Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)

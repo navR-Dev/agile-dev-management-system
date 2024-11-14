@@ -1,7 +1,7 @@
-// src/index.js
 import React from "react";
 import ReactDOM from "react-dom";
 import App from "./App";
+import AuthProvider from "./context/AuthContext";
 import { createGlobalStyle, ThemeProvider } from "styled-components";
 import { theme } from "./theme";
 
@@ -20,9 +20,11 @@ const GlobalStyle = createGlobalStyle`
 `;
 
 ReactDOM.render(
-  <ThemeProvider theme={theme}>
-    <GlobalStyle />
-    <App />
-  </ThemeProvider>,
+  <AuthProvider>
+    <ThemeProvider theme={theme}>
+      <GlobalStyle />
+      <App />
+    </ThemeProvider>
+  </AuthProvider>,
   document.getElementById("root")
 );
