@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from rest_framework.response import Response
+from rest_framework.decorators import api_view
 import json
 from .models import Sprint, Project, Task, Issue
 from .serializers import ProjectSerializer
@@ -107,13 +108,11 @@ def get_owner_id(request):
     else:
         return JsonResponse({"status": "error", "message": "No users found in the database"}, status=404)
 
+@api_view(['GET'])
 def get_projects(request):
-    try:
-        projects = Project.objects.all()
-        project_list = [{"id": project.id, "name": project.name} for project in projects]
-        return JsonResponse({"projects": project_list})
-    except Exception as e:
-        return JsonResponse({"status": "error", "message": str(e)}, status=400)
+    projects = Project.objects.all()
+    serializer = ProjectSerializer(projects, many=True)
+    return Response({"projects": serializer.data})
 
 def ongoing_sprints(request):
     today = date.today()
