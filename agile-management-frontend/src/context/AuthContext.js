@@ -1,38 +1,84 @@
-import React, { createContext, useState } from "react";
-import { login as loginService, signup as signupService } from "../services/authService";
+import React, { createContext, useState, useEffect } from "react";
+import axios from "axios";
 
 export const AuthContext = createContext();
 
-const AuthProvider = ({ children }) => {
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [authTokens, setAuthTokens] = useState(() => JSON.parse(localStorage.getItem("authTokens")));
+  const [authStatus, setAuthStatus] = useState(false);
+
+  // Set CSRF token and authentication headers
+  const setAuthHeaders = () => {
+    const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.content;
+    if (csrfToken) {
+      axios.defaults.headers["X-CSRFToken"] = csrfToken;
+    }
+    const token = localStorage.getItem("authToken"); // Example of fetching token
+    if (token) {
+      axios.defaults.headers["Authorization"] = `Bearer ${token}`;
+    }
+  };
+
+  useEffect(() => {
+    setAuthHeaders(); // Set headers when the component mounts
+  }, []);
+
+  const fetchSession = async () => {
+    try {
+      const sessionResponse = await axios.get("http://localhost:8000/api/session/");
+      if (sessionResponse.status === 200) {
+        const { user, auth_status } = sessionResponse.data;
+        setUser(user);
+        setAuthStatus(auth_status); // Set auth status based on the server response
+      }
+    } catch (error) {
+      console.error("Session fetch error:", error);
+      setUser(null);
+      setAuthStatus(false); // Ensure authStatus is false if session fetch fails
+    }
+  };
 
   const login = async (username, password) => {
     try {
-      const response = await loginService(username, password);
-      setAuthTokens(response.data);
-      setUser(response.data.user);
-      localStorage.setItem("authTokens", JSON.stringify(response.data));
+      const response = await axios.post("http://localhost:8000/api/login/", { username, password });
+      if (response.status === 200) {
+        setUser({ username });
+        setAuthStatus(true);
+        fetchSession();
+      }
     } catch (error) {
-      console.error("Login failed:", error);
+      console.error("Login error:", error);
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    setAuthTokens(null);
-    localStorage.removeItem("authTokens");
-  };
-
-  const signup = async (username, email, password) => {
+  const signup = async (name, organization, username, password, confirmPassword) => {
+    if (password !== confirmPassword) {
+      throw new Error("Passwords do not match");
+    }
     try {
-      await signupService(username, email, password);
+      const response = await axios.post("http://localhost:8000/api/signup/", { name, organization, username, password, confirmPassword });
+      if (response.status === 201) {
+        setUser({ username });
+        setAuthStatus(true); // Set auth status
+        fetchSession();
+      }
     } catch (error) {
-      console.error("Signup failed:", error);
+      console.error("Signup error:", error);
+      throw new Error("Signup failed");
     }
   };
 
-  return <AuthContext.Provider value={{ user, login, logout, signup, authTokens }}>{children}</AuthContext.Provider>;
+  const logout = async () => {
+    try {
+      await axios.post("http://localhost:8000/api/logout/");
+      setUser(null);
+      setAuthStatus(false); // Set auth status to false
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
+  return <AuthContext.Provider value={{ user, authStatus, login, signup, logout }}>{children}</AuthContext.Provider>;
 };
 
 export default AuthProvider;

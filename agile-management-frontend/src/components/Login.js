@@ -1,134 +1,99 @@
 import React, { useState, useContext } from "react";
-import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
 import styled from "styled-components";
+import { AuthContext } from "../context/AuthContext";
+import { Link } from "react-router-dom";
 
-const FormContainer = styled.div`
+const LoginContainer = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  background-color: #f7f8fa;
+  height: 100vh;
+  background-color: #f3f4f6;
 `;
 
-const FormCard = styled.div`
-  background-color: white;
-  padding: 30px;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+const FormWrapper = styled.div`
   width: 100%;
   max-width: 400px;
+  padding: 2rem;
+  background-color: #fff;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
   text-align: center;
 `;
 
 const FormTitle = styled.h2`
-  margin-bottom: 20px;
-  font-size: 24px;
+  margin-bottom: 1.5rem;
+  font-size: 1.8rem;
   color: #333;
 `;
 
-const InputField = styled.input`
+const StyledInput = styled.input`
   width: 100%;
-  padding: 12px;
-  margin-bottom: 15px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 16px;
-  box-sizing: border-box;
-  transition: border-color 0.3s ease;
-
+  padding: 0.8rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
   &:focus {
-    border-color: #007bff;
     outline: none;
+    border-color: #4a90e2;
   }
 `;
 
-const SubmitButton = styled.button`
+const StyledButton = styled.button`
   width: 100%;
-  padding: 12px;
-  background-color: #007bff;
-  color: white;
+  padding: 0.8rem;
+  background-color: #4a90e2;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: bold;
   border: none;
-  border-radius: 6px;
-  font-size: 16px;
+  border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
-
   &:hover {
-    background-color: #0056b3;
+    background-color: #357abd;
   }
 `;
 
-const ErrorMessage = styled.p`
-  color: red;
-  font-size: 14px;
-  margin-bottom: 15px;
+const SwitchFormText = styled.p`
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: #777;
 `;
 
-const SignUpLink = styled.p`
-  font-size: 14px;
-  margin-top: 15px;
-
-  a {
-    color: #007bff;
-    text-decoration: none;
-  }
-
-  a:hover {
+const SwitchLink = styled(Link)`
+  color: #4a90e2;
+  text-decoration: none;
+  font-weight: bold;
+  &:hover {
     text-decoration: underline;
   }
 `;
 
 const Login = () => {
-  const { login } = useContext(AuthContext); // Get login function from AuthContext
-  const navigate = useNavigate(); // To handle navigation after login
-  const [username, setUsername] = useState(""); // Store username input
-  const [password, setPassword] = useState(""); // Store password input
-  const [errorMessage, setErrorMessage] = useState(""); // Store error messages
+  const { login } = useContext(AuthContext);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
 
-  // Handle form submit for login
-  const handleSubmit = async (e) => {
-    e.preventDefault(); // Prevent page reload on form submit
-    try {
-      const response = await fetch("http://localhost:8000/api/login/", {
-        method: "POST",
-        body: JSON.stringify({ username, password }), // Send the username and password to the backend
-        headers: {
-          "Content-Type": "application/json", // Send data as JSON
-        },
-      });
-
-      const data = await response.json(); // Parse the JSON response from the API
-
-      // If JWT token is returned, store it and navigate to the app
-      if (data.token) {
-        localStorage.setItem("token", data.token); // Store the JWT token in localStorage
-        login(data.token); // Set token in the AuthContext
-        navigate("/"); // Redirect to the dashboard or home page after successful login
-      } else {
-        setErrorMessage("Invalid credentials."); // Set error if invalid credentials
-      }
-    } catch (error) {
-      setErrorMessage("An error occurred during login."); // Handle errors
-      console.error("Error logging in:", error);
-    }
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    login(username, password);
   };
 
   return (
-    <FormContainer>
-      <FormCard>
+    <LoginContainer>
+      <FormWrapper>
         <FormTitle>Login</FormTitle>
-        {errorMessage && <ErrorMessage>{errorMessage}</ErrorMessage>}
         <form onSubmit={handleSubmit}>
-          <InputField type="text" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} required />
-          <InputField type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          <SubmitButton type="submit">Log In</SubmitButton>
+          <StyledInput type="text" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} required />
+          <StyledInput type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <StyledButton type="submit">Log In</StyledButton>
         </form>
-        <SignUpLink>
-          Don't have an account? <a href="/signup">Sign Up</a>
-        </SignUpLink>
-      </FormCard>
-    </FormContainer>
+        <SwitchFormText>
+          Don't have an account? <SwitchLink to="/signup">Sign Up</SwitchLink>
+        </SwitchFormText>
+      </FormWrapper>
+    </LoginContainer>
   );
 };
 

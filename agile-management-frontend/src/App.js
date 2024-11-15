@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from "react";
+import React, { useContext } from "react";
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Dashboard from "./components/Dashboard";
@@ -10,36 +10,29 @@ import SprintForm from "./components/SprintForm";
 import IssueForm from "./components/IssueForm";
 import Login from "./components/Login";
 import Signup from "./components/Signup";
-import { AuthContext } from "./context/AuthContext"; // Import AuthContext
+import Logout from "./components/Logout";
 import { ThemeProvider } from "styled-components";
 import { theme } from "./theme";
+import { AuthContext } from "./context/AuthContext";
 
 function RequireAuth({ children }) {
-  const { isAuthenticated } = useContext(AuthContext);
-  // If not authenticated, redirect to login page
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  const { user } = useContext(AuthContext);
+  return user ? children : <Navigate to="/login" />;
 }
 
 function App() {
-  const { isAuthenticated } = useContext(AuthContext); // To check if the user is logged in
-
-  useEffect(() => {
-    // Redirect user to Dashboard if they are already logged in
-    if (isAuthenticated && window.location.pathname === "/login") {
-      window.location.href = "/";
-    }
-  }, [isAuthenticated]);
+  const { user } = useContext(AuthContext);
 
   return (
     <ThemeProvider theme={theme}>
       <Router>
         <div>
-          {/* Only show the Navbar if the user is authenticated */}
-          {isAuthenticated && <Navbar />}
+          {user && <Navbar />} {/* Show Navbar only if authenticated */}
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/logout" element={<Logout />} />
 
             {/* Protected Routes */}
             <Route

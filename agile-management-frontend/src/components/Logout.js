@@ -1,3 +1,4 @@
+// components/Logout.js
 import React, { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 
