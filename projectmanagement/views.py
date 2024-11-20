@@ -1,12 +1,10 @@
-# project_management/views.py
-
 from django.http import JsonResponse
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
 from django.contrib.auth import authenticate, login, logout
-from rest_framework.decorators import api_view
+from rest_framework.permissions import AllowAny
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 import json
@@ -52,23 +50,37 @@ def add_task(request):
             sprint_id = data.get('sprint_id')
             assignee_id = data.get('assignee_id')
             status = data.get('status', 'TO_DO')
-
+            project_id = data.get('project_id')  # Add project_id field
+            
+            # Fetch project, sprint, and assignee
+            project = Project.objects.get(id=project_id)  # Ensure project exists
             sprint = Sprint.objects.get(id=sprint_id)
             assignee = User.objects.get(id=assignee_id) if assignee_id else None
 
+            # Create task and associate project
             task = Task.objects.create(
                 title=title,
                 description=description,
                 sprint=sprint,
                 assignee=assignee,
-                status=status
+                status=status,
+                project=project  # Associate project with the task
             )
 
-            return JsonResponse({"status": "success", "task": {"id": task.id, "title": task.title}})
+            return JsonResponse({
+                "status": "success",
+                "task": {
+                    "id": task.id,
+                    "title": task.title,
+                    "project_id": project.id  # Include project_id in the response
+                }
+            })
         except Sprint.DoesNotExist:
             return JsonResponse({"status": "error", "message": "Sprint not found"}, status=404)
         except User.DoesNotExist:
             return JsonResponse({"status": "error", "message": "User (assignee) not found"}, status=404)
+        except Project.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Project not found"}, status=404)
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e)}, status=400)
 
@@ -105,6 +117,7 @@ def get_owner_id(request):
         return JsonResponse({"status": "error", "message": "No users found in the database"}, status=404)
 
 @api_view(['GET'])
+@permission_classes([AllowAny])  # Apply permissions to allow anyone
 def get_projects(request):
     projects = Project.objects.all()
     serializer = ProjectSerializer(projects, many=True)
@@ -116,9 +129,29 @@ def ongoing_sprints(request):
     sprint_data = [{"id": sprint.id, "name": sprint.name, "start_date": sprint.start_date, "end_date": sprint.end_date} for sprint in sprints]
     return JsonResponse({"sprints": sprint_data})
 
+@csrf_exempt
+def get_sprints_by_project(request, project_id):
+    try:
+        # Get all sprints related to the project with the given project_id
+        sprints = Sprint.objects.filter(project_id=project_id)
+
+        # Create a list of dictionaries to return as JSON
+        sprint_data = [{"id": sprint.id, "name": sprint.name} for sprint in sprints]
+
+        return JsonResponse({"sprints": sprint_data}, status=200)
+
+    except Sprint.DoesNotExist:
+        return JsonResponse({"message": "No sprints found for this project"}, status=404)
+
+    except Exception as e:
+        return JsonResponse({"message": str(e)}, status=500)
+
 def recent_tasks(request):
     tasks = Task.objects.order_by('-created_at')[:5]
-    task_data = [{"id": task.id, "title": task.title, "status": task.status} for task in tasks]
+    task_data = [
+        {"id": task.id, "title": task.title, "status": task.status, "project_id": task.project.id}  # Include project_id
+        for task in tasks
+    ]
     return JsonResponse({"tasks": task_data})
 
 def new_issues(request):
@@ -129,7 +162,7 @@ def new_issues(request):
             "title": issue.title,
             "description": issue.description,
             "status": issue.status,
-            "assignee": issue.assignee.username if issue.assignee else None,
+            "priority": issue.priority,
             "created_at": issue.created_at,
             "updated_at": issue.updated_at,
             "project": issue.project.name if issue.project else None
@@ -147,14 +180,15 @@ def add_issue(request):
             description = data.get("description")
             status = data.get("status", "new")
             priority = data.get("priority")
-            assignee_id = data.get("assignee_id")
+            project_id = data.get("project_id")
+            project = Project.objects.get(id=project_id)
 
             issue = Issue.objects.create(
                 title=title,
                 description=description,
                 status=status,
                 priority=priority,
-                assignee_id=assignee_id,
+                project=project
             )
             
             return JsonResponse({"status": "success", "message": "Issue created successfully", "issue_id": issue.id}, status=201)
@@ -205,5 +239,42 @@ def logout_view(request):
 @csrf_exempt
 def session_view(request):
     if request.user.is_authenticated:
-        return JsonResponse({"user": request.user.username, "auth_status": True})
-    return JsonResponse({"error": "User not authenticated", "auth_status": False}, status=401)
+        return JsonResponse({
+            "user": {
+                "username": request.user.username,
+                "email": request.user.email,
+            },
+            "auth_status": True,
+        })
+    return JsonResponse({"auth_status": False, "user": None})
+
+# Update Project View
+@csrf_exempt
+def update_project(request, project_id):
+    if request.method == 'PUT':
+        try:
+            data = json.loads(request.body)
+            project = Project.objects.get(id=project_id)
+            
+            # Update the fields
+            project.name = data.get('name', project.name)
+            project.description = data.get('description', project.description)
+            
+            # Save changes
+            project.save()
+            return JsonResponse({"project": {"id": project.id, "name": project.name, "description": project.description}}, status=200)
+        except Project.DoesNotExist:
+            return JsonResponse({"error": "Project not found"}, status=404)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON format"}, status=400)
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+@csrf_exempt
+def delete_project(request, project_id):
+    if request.method == 'DELETE':
+        try:
+            project = Project.objects.get(id=project_id)
+            project.delete()
+            return JsonResponse({"status": "success", "message": "Project deleted successfully"})
+        except Project.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Project not found"}, status=404)

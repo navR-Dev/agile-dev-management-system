@@ -25,7 +25,7 @@ export const AuthProvider = ({ children }) => {
 
   const fetchSession = async () => {
     try {
-      const sessionResponse = await axios.get("http://localhost:8000/api/session/");
+      const sessionResponse = await axios.get("http://localhost:8000/api/session/", { withCredentials: true });
       if (sessionResponse.status === 200) {
         const { user, auth_status } = sessionResponse.data;
         setUser(user);
@@ -44,7 +44,6 @@ export const AuthProvider = ({ children }) => {
       if (response.status === 200) {
         setUser({ username });
         setAuthStatus(true);
-        fetchSession();
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -60,7 +59,6 @@ export const AuthProvider = ({ children }) => {
       if (response.status === 201) {
         setUser({ username });
         setAuthStatus(true); // Set auth status
-        fetchSession();
       }
     } catch (error) {
       console.error("Signup error:", error);

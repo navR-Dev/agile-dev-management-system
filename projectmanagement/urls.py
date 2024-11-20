@@ -1,7 +1,6 @@
 from django.urls import path
 from . import views
 
-
 urlpatterns = [
     path('add_project/', views.add_project, name='add_project'),
     path('add_task/', views.add_task, name='add_task'),
@@ -16,4 +15,7 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('session/', views.session_view, name='session'),
+    path('update_project/<int:project_id>/', views.update_project, name='update_project'),  # Update Project
+    path('delete_project/<int:project_id>/', views.delete_project, name='delete_project'),  # Delete Project
+    path('get_sprints/<int:project_id>/', views.get_sprints_by_project, name='get_sprints_by_project'),
 ]

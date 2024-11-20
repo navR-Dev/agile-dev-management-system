@@ -75,6 +75,12 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
 ]
 
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Default session engine
+SESSION_COOKIE_NAME = 'sessionid'  # This is the default cookie name
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Session should persist across browser restarts
+SESSION_COOKIE_HTTPONLY = True  # Set to prevent JavaScript from accessing the cookie
+SESSION_COOKIE_SECURE = False  # Set to True only if using HTTPS (for development, set to False)
+
 ROOT_URLCONF = "agiledev.urls"
 
 TEMPLATES = [

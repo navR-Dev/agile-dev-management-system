@@ -1,7 +1,7 @@
 import React, { useState, useContext } from "react";
 import styled from "styled-components";
 import { AuthContext } from "../context/AuthContext";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; // Import useNavigate
 
 const LoginContainer = styled.div`
   display: flex;
@@ -71,13 +71,22 @@ const SwitchLink = styled(Link)`
 `;
 
 const Login = () => {
-  const { login } = useContext(AuthContext);
+  const { login, authStatus } = useContext(AuthContext); // Use authStatus from context
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const navigate = useNavigate(); // Initialize useNavigate hook
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    login(username, password);
+    try {
+      await login(username, password); // Wait for the login to complete
+      if (authStatus) {
+        navigate("/"); // Redirect on successful login
+      }
+    } catch (error) {
+      console.error("Login failed:", error);
+      // Optionally handle login failure here
+    }
   };
 
   return (
